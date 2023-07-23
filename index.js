@@ -24,12 +24,12 @@ const verifyJWT = (req, res, next) => {
       .send({ error: true, message: "unAuthorized access " });
   }
   const token = authorization.split(" ")[1];
-  // console.log("token inside ", token);
+  console.log("token inside server site atik", token);
 
   // verify a token symmetric
   jwt.verify(
     token,
-    process.env.ACCESS_TOKEN_SECRET_JWT,
+    process.env.Access_token_bistro_boss,
     function (error, decoded) {
       if (error) {
         return res
@@ -71,9 +71,6 @@ async function run() {
       const token = jwt.sign(user, process.env.Access_token_bistro_boss, {
         expiresIn: "1h",
       });
-
-      console.log("server site ",token)
-
       res.send({ token });
     });
 
@@ -96,6 +93,21 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
+    
+    // security layer :verifyJWT
+    // email same 
+    //check admin 
+    app.get("/users/admin/:email",verifyJWT,async(req,res)=>{
+      const email=req.params.email
+      //
+      if(req.decoded.email !==email){
+        res.send({admin:false})
+      }
+      const query={email:email}
+      const AdminUser=await usersCollection.findOne(query)
+      const result={admin:AdminUser?.role=="admin"}
+      res.send(result)
+    }) 
 
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
@@ -110,10 +122,16 @@ async function run() {
     });
 
     // cart collection api
-    app.get("/carts", async (req, res) => {
+    app.get("/carts", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
+      }
+      const decodedEmail=req.decoded.email
+      console.log(decodedEmail,"inside server side")
+
+      if(email!==decodedEmail){
+         return res.status(401).send({ error: true, message: "forbidden access !" });
       }
 
       const query = { userEmail: email };
