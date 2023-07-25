@@ -65,6 +65,18 @@ async function run() {
     const reviewCollection = client.db("BistroDB").collection("reviews");
     const cartCollection = client.db("BistroDB").collection("carts");
 
+    //
+  // Warning :use verifyJWT before using verifyAdmin
+    const verifyAdmin=async(req,res,next)=>{
+      const email=req.decoded.email; // form verifyAdmin 
+      const query={email:email}
+      const user=await usersCollection.findOne(query)
+      if(user?.role !=='admin'){
+        return res.status(403).send({error:true,message:'forbidden message'})
+      }
+      next();
+    }
+
     // create access token
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -74,8 +86,12 @@ async function run() {
       res.send({ token });
     });
 
+    /**
+     * 1. use jwt token:verifyJWT
+     * 2. use verifyAdmin middleware
+     */
     //user related api
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyJWT,verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
