@@ -3,6 +3,7 @@ const app = express();
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 require("dotenv").config();
+const stripe=require('stripe')(process.env.payment_Secret_key) //  payment 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 let port = process.env.PORT || 5000;
@@ -24,7 +25,7 @@ const verifyJWT = (req, res, next) => {
       .send({ error: true, message: "unAuthorized access " });
   }
   const token = authorization.split(" ")[1];
-  console.log("token inside server site atik", token);
+  // console.log("token inside server site atik", token);
 
   // verify a token symmetric
   jwt.verify(
@@ -64,6 +65,7 @@ async function run() {
     const usersCollection = client.db("BistroDB").collection("users");
     const reviewCollection = client.db("BistroDB").collection("reviews");
     const cartCollection = client.db("BistroDB").collection("carts");
+    const paymentCollection = client.db("BistroDB").collection("payments");
 
     //
   // Warning :use verifyJWT before using verifyAdmin
@@ -167,6 +169,33 @@ async function run() {
       const result = await cartCollection.deleteOne(query);
       res.send(result);
     });
+
+    //  create payment intent
+    app.post("/create-payment-intent",verifyJWT,async(req,res)=>{
+      const {price}=req.body;
+      const amount=price * 100;
+      console.log(price,amount)
+      const paymentIntent=await stripe.paymentIntents.create({
+        amount:amount,
+        currency:'usd',
+        payment_method_types:['card']
+      }) 
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+    // payment related api
+    app.post('/payments', verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      // const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+      // const deleteResult = await cartCollection.deleteMany(query)
+
+      // res.send({ insertResult, deleteResult });
+      res.send(insertResult);
+    })
 
     // menu related api
 
