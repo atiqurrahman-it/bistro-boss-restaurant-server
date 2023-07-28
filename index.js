@@ -66,6 +66,7 @@ async function run() {
     const reviewCollection = client.db("BistroDB").collection("reviews");
     const cartCollection = client.db("BistroDB").collection("carts");
     const paymentCollection = client.db("BistroDB").collection("payments");
+    const messageCollection = client.db("BistroDB").collection("messages");
 
     //
   // Warning :use verifyJWT before using verifyAdmin
@@ -173,7 +174,7 @@ async function run() {
     //  create payment intent
     app.post("/create-payment-intent",verifyJWT,async(req,res)=>{
       const {price}=req.body;
-      const amount=price * 100;
+      const amount=parseInt(price * 100);
       console.log(price,amount)
       const paymentIntent=await stripe.paymentIntents.create({
         amount:amount,
@@ -190,7 +191,7 @@ async function run() {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
 
-      const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+      const query = {_id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
       const deleteResult = await cartCollection.deleteMany(query)
 
       res.send({ insertResult, deleteResult });
@@ -216,7 +217,7 @@ async function run() {
       */
 
       const payments = await paymentCollection.find().toArray();
-      const revenue = payments.reduce( ( sum, payment) => sum + payment.price, 0)
+      const revenue = parseFloat(payments.reduce( ( sum, payment) => sum + payment.price, 0).toFixed(2))  
 
       res.send({
         revenue,
@@ -252,6 +253,13 @@ async function run() {
       const menus = await reviewCollection.find().toArray();
       res.send(menus);
     });
+
+    //contact us 
+    app.post("/contactUs",async(req,res)=>{
+      const message=req.body
+      const result=await messageCollection.insertOne(message)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
