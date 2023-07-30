@@ -247,6 +247,21 @@ async function run() {
       res.send(result)
     })
 
+    app.put("/menu/:id",async(req,res)=>{
+      const id=req.params.id;
+      const updateItem=req.body
+
+      const filter={_id:new ObjectId(id)}
+      const options = { upsert: true };
+
+      const updateDoc = {
+        $set: {
+          plot: updateItem,
+        },
+      };
+      const result=await menuCollection.insertOne(filter,updateDoc,options)
+    })
+
     // reviews related api
 
     app.get("/reviews", async (req, res) => {
